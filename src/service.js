@@ -1068,6 +1068,13 @@ class CloudStoreService {
       const deadline = Date.now() + this.config.timing.pickupWindowMs
       const shouldStopCollecting = () => {
         if (this.active?.cancelled) return true
+        // 背包捡满就提前结束收集（与"玩家远离"同级的提前结束条件）：满背包
+        // 捡不起玩家丢的物品，干等窗口结束只会让地上的物品堆积甚至消失，
+        // 不如立即回去入库，玩家想继续存可以再叫一次。
+        if (this.bot.inventory.emptySlotCount?.() === 0) {
+          if (this.active) this.active.depositStopReason = 'inventory_full'
+          return true
+        }
         const playerEntity = this.resolvePlayerEntity(username).entity
         const botPosition = this.bot.entity?.position
         if (!playerEntity?.position || !botPosition) return false
